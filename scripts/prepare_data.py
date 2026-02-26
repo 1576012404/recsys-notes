@@ -19,17 +19,13 @@ def main() -> None:
     args = parser.parse_args()
     cfg = read_yaml(args.config)
     preprocess_criteo(
-        raw_path=cfg.get("raw_path", ""),
+        raw_train_path=cfg["raw_train_path"],
+        raw_valid_path=cfg["raw_valid_path"],
+        raw_test_path=cfg["raw_test_path"],
         output_dir=cfg["output_dir"],
-        raw_train_path=cfg.get("raw_train_path"),
-        raw_valid_path=cfg.get("raw_valid_path"),
-        raw_test_path=cfg.get("raw_test_path"),
-        delimiter=cfg.get("delimiter", "auto"),
-        has_header=cfg.get("has_header"),
+        delimiter=cfg.get("delimiter", ","),
+        has_header=bool(cfg.get("has_header", True)),
         min_freq=int(cfg.get("min_freq", 10)),
-        train_ratio=float(cfg.get("train_ratio", 0.8)),
-        valid_ratio=float(cfg.get("valid_ratio", 0.1)),
-        test_ratio=float(cfg.get("test_ratio", 0.1)),
         max_rows=cfg.get("max_rows"),
         dense_transform=cfg.get("dense_transform", "log1p"),
         seed=int(cfg.get("seed", 2026)),

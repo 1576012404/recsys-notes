@@ -1,10 +1,10 @@
 seed: 2026
-raw_path: data/raw/train.txt
+raw_train_path: data/raw/criteo_x1/train.csv
+raw_valid_path: data/raw/criteo_x1/valid.csv
+raw_test_path: data/raw/criteo_x1/test.csv
+delimiter: ","
+has_header: true
 output_dir: data/processed
-min_freq: 10
-train_ratio: 0.8
-valid_ratio: 0.1
-test_ratio: 0.1
+min_freq: 1
 max_rows: null
 dense_transform: log1p
-

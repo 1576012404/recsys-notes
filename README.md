@@ -17,20 +17,16 @@ pip install -r requirements.txt
 
 ## 2. Data
 
-Place Kaggle Criteo `train.txt` at:
+Place `Criteo_x1` CSV files at:
 
-`data/raw/train.txt`
+- `data/raw/criteo_x1/train.csv`
+- `data/raw/criteo_x1/valid.csv`
+- `data/raw/criteo_x1/test.csv`
 
 Then preprocess:
 
 ```bash
 python -m scripts.prepare_data --config configs/data.yaml
-```
-
-For `Criteo_x1` (`train.csv/valid.csv/test.csv`), use:
-
-```bash
-python -m scripts.prepare_data --config configs/data_criteo_x1.yaml
 ```
 
 Outputs:
