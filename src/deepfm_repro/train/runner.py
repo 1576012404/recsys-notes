@@ -43,6 +43,40 @@ def _print_model_summary(model: nn.Module, model_name: str) -> None:
     print("=========================\n")
 
 
+def _print_detailed_summary_with_torchinfo(
+    model: nn.Module,
+    model_name: str,
+    dense_dim: int,
+    sparse_fields: int,
+    device: torch.device,
+) -> None:
+    try:
+        from torchinfo import summary  # type: ignore
+    except Exception:
+        _print_model_summary(model, model_name)
+        print("torchinfo not installed, fallback to simple summary. Install with: pip install torchinfo")
+        return
+
+    dense_sample = torch.zeros((2, dense_dim), dtype=torch.float32, device=device)
+    sparse_sample = torch.zeros((2, sparse_fields), dtype=torch.long, device=device)
+    try:
+        print("\n===== Detailed Model Summary (torchinfo) =====")
+        print(f"model: {model_name}")
+        info = summary(
+            model,
+            input_data=(dense_sample, sparse_sample),
+            depth=6,
+            col_names=("input_size", "output_size", "num_params", "trainable"),
+            verbose=0,
+            device=str(device),
+        )
+        print(info)
+        print("==============================================\n")
+    except Exception as exc:
+        print(f"torchinfo summary failed: {exc}. Falling back to simple summary.")
+        _print_model_summary(model, model_name)
+
+
 def _build_model(config: Dict, field_dims: Iterable[int], dense_dim: int) -> nn.Module:
     model_name = config["model"]
     embedding_dim = int(config.get("embedding_dim", 16))
@@ -146,7 +180,13 @@ def train_once(config: Dict) -> Dict[str, object]:
 
     device = _get_device(config.get("device", "cuda"))
     model = _build_model(config, field_dims, dense_dim).to(device)
-    _print_model_summary(model, config["model"])
+    _print_detailed_summary_with_torchinfo(
+        model=model,
+        model_name=config["model"],
+        dense_dim=dense_dim,
+        sparse_fields=len(field_dims),
+        device=device,
+    )
 
     pretrain_ckpt = config.get("pretrain_checkpoint")
     if config["model"] == "fnn" and pretrain_ckpt:
