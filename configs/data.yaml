@@ -5,6 +5,5 @@ raw_test_path: data/raw/criteo_x1/test.csv
 delimiter: ","
 has_header: true
 output_dir: data/processed
-min_freq: 1
 max_rows: null
-dense_transform: log1p
+dense_transform: none

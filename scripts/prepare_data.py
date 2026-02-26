@@ -25,9 +25,8 @@ def main() -> None:
         output_dir=cfg["output_dir"],
         delimiter=cfg.get("delimiter", ","),
         has_header=bool(cfg.get("has_header", True)),
-        min_freq=int(cfg.get("min_freq", 10)),
         max_rows=cfg.get("max_rows"),
-        dense_transform=cfg.get("dense_transform", "log1p"),
+        dense_transform=cfg.get("dense_transform", "none"),
         seed=int(cfg.get("seed", 2026)),
     )
 

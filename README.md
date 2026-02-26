@@ -29,6 +29,8 @@ Then preprocess:
 python -m scripts.prepare_data --config configs/data.yaml
 ```
 
+`prepare_data` assumes sparse fields are already label-encoded IDs (Criteo_x1 format) and does not rebuild vocab.
+
 Outputs:
 
 - `data/processed/criteo.npz`
