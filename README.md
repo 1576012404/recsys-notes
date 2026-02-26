@@ -27,6 +27,12 @@ Then preprocess:
 python -m scripts.prepare_data --config configs/data.yaml
 ```
 
+For `Criteo_x1` (`train.csv/valid.csv/test.csv`), use:
+
+```bash
+python -m scripts.prepare_data --config configs/data_criteo_x1.yaml
+```
+
 Outputs:
 
 - `data/processed/criteo.npz`
