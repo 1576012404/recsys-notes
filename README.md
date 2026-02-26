@@ -29,7 +29,7 @@ Then preprocess:
 python -m scripts.prepare_data --config configs/data.yaml
 ```
 
-`prepare_data` assumes sparse fields are already label-encoded IDs (Criteo_x1 format) and does not rebuild vocab.
+`prepare_data` assumes sparse fields are numeric IDs (Criteo_x1 format), then remaps each sparse field to compact `0..K-1` IDs.
 
 Outputs:
 

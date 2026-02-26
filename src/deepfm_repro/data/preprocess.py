@@ -89,8 +89,6 @@ def preprocess_criteo(
             count += 1
         return count
 
-    field_max = np.zeros((SPARSE_FIELDS,), dtype=np.int64)
-
     def encode_file(path: Path, desc: str, limit: Optional[int] = None):
         rows = count_rows(path, limit=limit)
         y_np = np.zeros((rows,), dtype=np.float32)
@@ -104,7 +102,6 @@ def preprocess_criteo(
             d_np[idx] = np.asarray(dense_vals, dtype=np.float32)
             sparse_arr = np.asarray(sparse_vals, dtype=np.int32)
             s_np[idx] = sparse_arr
-            np.maximum(field_max, sparse_arr.astype(np.int64), out=field_max)
             idx += 1
         d_np = _transform_dense(d_np, dense_transform).astype(np.float32)
         return y_np, d_np, s_np
@@ -118,7 +115,16 @@ def preprocess_criteo(
         "test": (test_y, test_dense, test_sparse),
     }
     total_rows = int(train_y.shape[0] + valid_y.shape[0] + test_y.shape[0])
-    field_dims = [int(field_max[i]) + 1 for i in range(SPARSE_FIELDS)]
+
+    # Remap each sparse field to compact 0..K-1 ids to avoid oversized embeddings.
+    field_dims: List[int] = []
+    for i in tqdm(range(SPARSE_FIELDS), desc="Compact remap sparse fields"):
+        all_col = np.concatenate([train_sparse[:, i], valid_sparse[:, i], test_sparse[:, i]], axis=0)
+        uniques = np.unique(all_col)
+        train_sparse[:, i] = np.searchsorted(uniques, train_sparse[:, i]).astype(np.int32)
+        valid_sparse[:, i] = np.searchsorted(uniques, valid_sparse[:, i]).astype(np.int32)
+        test_sparse[:, i] = np.searchsorted(uniques, test_sparse[:, i]).astype(np.int32)
+        field_dims.append(int(uniques.shape[0]))
 
     np.savez(
         output_dir / "criteo.npz",
@@ -141,7 +147,7 @@ def preprocess_criteo(
         "dense_fields": DENSE_FIELDS,
         "sparse_fields": SPARSE_FIELDS,
         "field_dims": field_dims,
-        "sparse_id_mode": "pre_encoded",
+        "sparse_id_mode": "compact_remap_per_field",
         "dense_transform": dense_transform,
         "split": {"train": "from_file", "valid": "from_file", "test": "from_file"},
         "delimiter": delimiter,
