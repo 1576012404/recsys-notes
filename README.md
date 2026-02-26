@@ -76,6 +76,12 @@ Run complete suite (all models, multiple seeds):
 python -m scripts.run_all --seeds 2026 2027 2028
 ```
 
+Print model structures and parameter counts:
+
+```bash
+python -m scripts.print_model --show-structure
+```
+
 ## 5. Results Schema
 
 `results/metrics.csv` columns:
