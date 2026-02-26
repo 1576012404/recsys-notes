@@ -1,0 +1,4 @@
+model: fnn
+init_from: fm_pretrain
+pretrain_run_id: null
+

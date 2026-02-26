@@ -1,0 +1,10 @@
+seed: 2026
+raw_path: data/raw/train.txt
+output_dir: data/processed
+min_freq: 10
+train_ratio: 0.8
+valid_ratio: 0.1
+test_ratio: 0.1
+max_rows: null
+dense_transform: log1p
+
