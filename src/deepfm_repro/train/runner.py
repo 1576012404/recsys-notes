@@ -19,6 +19,30 @@ from deepfm_repro.train.metrics import binary_auc, binary_logloss
 from deepfm_repro.utils import config_hash, set_seed
 
 
+def _format_num(n: int) -> str:
+    return f"{n:,}"
+
+
+def _print_model_summary(model: nn.Module, model_name: str) -> None:
+    total = sum(p.numel() for p in model.parameters())
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    module_counts: Dict[str, int] = {}
+    for name, p in model.named_parameters():
+        key = name.split(".")[0]
+        module_counts[key] = module_counts.get(key, 0) + p.numel()
+
+    print("\n===== Model Summary =====")
+    print(f"model: {model_name}")
+    print(f"total_params: {_format_num(total)}")
+    print(f"trainable_params: {_format_num(trainable)}")
+    print("params_by_top_module:")
+    for key in sorted(module_counts.keys()):
+        print(f"  - {key}: {_format_num(module_counts[key])}")
+    print("structure:")
+    print(model)
+    print("=========================\n")
+
+
 def _build_model(config: Dict, field_dims: Iterable[int], dense_dim: int) -> nn.Module:
     model_name = config["model"]
     embedding_dim = int(config.get("embedding_dim", 16))
@@ -122,6 +146,7 @@ def train_once(config: Dict) -> Dict[str, object]:
 
     device = _get_device(config.get("device", "cuda"))
     model = _build_model(config, field_dims, dense_dim).to(device)
+    _print_model_summary(model, config["model"])
 
     pretrain_ckpt = config.get("pretrain_checkpoint")
     if config["model"] == "fnn" and pretrain_ckpt:
@@ -251,4 +276,3 @@ def evaluate_run(run_dir: str | Path, data_npz: str | Path, metadata_json: str |
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
     y_true, y_prob, _ = _predict(model, test_loader, device)
     return {"auc": binary_auc(y_true, y_prob), "logloss": binary_logloss(y_true, y_prob)}
-
