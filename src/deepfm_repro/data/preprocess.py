@@ -83,34 +83,44 @@ def preprocess_criteo(
     valid_path = Path(raw_valid_path)
     test_path = Path(raw_test_path)
 
+    def count_rows(path: Path, limit: Optional[int] = None) -> int:
+        count = 0
+        for _ in tqdm(_iter_records(path, delimiter=delimiter, has_header=has_header, limit=limit), desc=f"Count {path.name}"):
+            count += 1
+        return count
+
+    field_max = np.zeros((SPARSE_FIELDS,), dtype=np.int64)
+
     def encode_file(path: Path, desc: str, limit: Optional[int] = None):
-        ys: List[float] = []
-        ds: List[List[float]] = []
-        ss: List[List[int]] = []
+        rows = count_rows(path, limit=limit)
+        y_np = np.zeros((rows,), dtype=np.float32)
+        d_np = np.zeros((rows, DENSE_FIELDS), dtype=np.float32)
+        s_np = np.zeros((rows, SPARSE_FIELDS), dtype=np.int32)
+        idx = 0
         for label, dense_vals, sparse_vals in tqdm(
             _iter_records(path, delimiter=delimiter, has_header=has_header, limit=limit), desc=desc
         ):
-            ys.append(float(label))
-            ds.append(dense_vals)
-            ss.append(sparse_vals)
-        y_np = np.array(ys, dtype=np.float32)
-        d_np = _transform_dense(np.array(ds, dtype=np.float32), dense_transform).astype(np.float32)
-        s_np = np.array(ss, dtype=np.int64)
+            y_np[idx] = float(label)
+            d_np[idx] = np.asarray(dense_vals, dtype=np.float32)
+            sparse_arr = np.asarray(sparse_vals, dtype=np.int32)
+            s_np[idx] = sparse_arr
+            np.maximum(field_max, sparse_arr.astype(np.int64), out=field_max)
+            idx += 1
+        d_np = _transform_dense(d_np, dense_transform).astype(np.float32)
         return y_np, d_np, s_np
 
-    train_y, train_dense, train_sparse = encode_file(train_path, "Pass2 encoding train", limit=max_rows)
-    valid_y, valid_dense, valid_sparse = encode_file(valid_path, "Pass2 encoding valid")
-    test_y, test_dense, test_sparse = encode_file(test_path, "Pass2 encoding test")
+    train_y, train_dense, train_sparse = encode_file(train_path, "Encode train", limit=max_rows)
+    valid_y, valid_dense, valid_sparse = encode_file(valid_path, "Encode valid")
+    test_y, test_dense, test_sparse = encode_file(test_path, "Encode test")
     split_data = {
         "train": (train_y, train_dense, train_sparse),
         "valid": (valid_y, valid_dense, valid_sparse),
         "test": (test_y, test_dense, test_sparse),
     }
     total_rows = int(train_y.shape[0] + valid_y.shape[0] + test_y.shape[0])
-    all_sparse = np.concatenate([train_sparse, valid_sparse, test_sparse], axis=0)
-    field_dims = [int(all_sparse[:, i].max()) + 1 for i in range(SPARSE_FIELDS)]
+    field_dims = [int(field_max[i]) + 1 for i in range(SPARSE_FIELDS)]
 
-    np.savez_compressed(
+    np.savez(
         output_dir / "criteo.npz",
         y_train=split_data["train"][0],
         dense_train=split_data["train"][1],
