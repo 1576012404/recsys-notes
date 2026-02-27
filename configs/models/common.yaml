@@ -3,7 +3,7 @@ data_npz: data/processed/criteo.npz
 metadata_json: data/processed/metadata.json
 results_dir: results
 batch_size: 4096
-epochs: 5
+epochs: 20
 learning_rate: 0.001
 weight_decay: 1.0e-6
 device: cuda
@@ -11,6 +11,5 @@ num_workers: 0
 embedding_dim: 16
 mlp_dims: [400, 400, 400]
 dropout: 0.2
-early_stop_patience: 2
+early_stop_patience: 3
 save_every_epoch: false
-
