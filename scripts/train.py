@@ -51,7 +51,7 @@ def main() -> None:
         overrides["epochs"] = min(int(overrides.get("epochs", 20)), 3)
         overrides["max_train_steps_per_epoch"] = int(overrides.get("max_train_steps_per_epoch", 200))
         overrides["max_eval_batches"] = int(overrides.get("max_eval_batches", 50))
-        overrides["compute_train_metrics"] = False
+        overrides["compute_train_metrics"] = True
 
     cfg = load_train_config(args.common_config, model_cfg, overrides)
     summary = train_once(cfg)
