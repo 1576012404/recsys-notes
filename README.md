@@ -44,6 +44,12 @@ Train a single model:
 python -m scripts.train --model deepfm --seed 2026
 ```
 
+Quick debug run:
+
+```bash
+python -m scripts.train --model deepfm --seed 2026 --debug
+```
+
 Train FM pretrain for FNN:
 
 ```bash

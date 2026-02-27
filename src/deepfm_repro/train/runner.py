@@ -110,14 +110,21 @@ def _get_device(device_name: str) -> torch.device:
     return torch.device(device_name)
 
 
-def _predict(model: nn.Module, loader: DataLoader, device: torch.device) -> Tuple[np.ndarray, np.ndarray, float]:
+def _predict(
+    model: nn.Module,
+    loader: DataLoader,
+    device: torch.device,
+    max_batches: int | None = None,
+) -> Tuple[np.ndarray, np.ndarray, float]:
     model.eval()
     losses = []
     labels = []
     probs = []
     criterion = nn.BCEWithLogitsLoss()
     with torch.no_grad():
-        for dense, sparse, y in loader:
+        for batch_idx, (dense, sparse, y) in enumerate(loader):
+            if max_batches is not None and batch_idx >= max_batches:
+                break
             dense = dense.to(device)
             sparse = sparse.to(device)
             y = y.to(device).view(-1, 1)
@@ -127,6 +134,8 @@ def _predict(model: nn.Module, loader: DataLoader, device: torch.device) -> Tupl
             prob = torch.sigmoid(logits).cpu().numpy().reshape(-1)
             probs.append(prob)
             labels.append(y.cpu().numpy().reshape(-1))
+    if not labels:
+        return np.array([], dtype=np.float32), np.array([], dtype=np.float32), float("nan")
     y_true = np.concatenate(labels)
     y_prob = np.concatenate(probs)
     return y_true, y_prob, float(np.mean(losses))
@@ -202,6 +211,13 @@ def train_once(config: Dict) -> Dict[str, object]:
     criterion = nn.BCEWithLogitsLoss()
     epochs = int(config.get("epochs", 5))
     patience = int(config.get("early_stop_patience", 2))
+    max_train_steps_per_epoch = config.get("max_train_steps_per_epoch")
+    if max_train_steps_per_epoch is not None:
+        max_train_steps_per_epoch = int(max_train_steps_per_epoch)
+    max_eval_batches = config.get("max_eval_batches")
+    if max_eval_batches is not None:
+        max_eval_batches = int(max_eval_batches)
+    compute_train_metrics = bool(config.get("compute_train_metrics", True))
 
     run_id = f"{config['model']}_{seed}_{uuid.uuid4().hex[:8]}"
     timestamp = datetime.now(timezone.utc).isoformat()
@@ -216,8 +232,11 @@ def train_once(config: Dict) -> Dict[str, object]:
 
     for epoch in range(1, epochs + 1):
         model.train()
-        progress = tqdm(total=len(train_loader), desc=f"Epoch {epoch}/{epochs}", leave=True, dynamic_ncols=True)
-        for dense, sparse, y in train_loader:
+        total_steps = len(train_loader) if max_train_steps_per_epoch is None else min(len(train_loader), max_train_steps_per_epoch)
+        progress = tqdm(total=total_steps, desc=f"Epoch {epoch}/{epochs}", leave=True, dynamic_ncols=True)
+        for step_idx, (dense, sparse, y) in enumerate(train_loader):
+            if max_train_steps_per_epoch is not None and step_idx >= max_train_steps_per_epoch:
+                break
             dense = dense.to(device)
             sparse = sparse.to(device)
             y = y.to(device).view(-1, 1)
@@ -230,13 +249,17 @@ def train_once(config: Dict) -> Dict[str, object]:
             progress.set_postfix(train_loss=f"{loss_val:.4f}")
             progress.update(1)
 
-        train_y, train_prob, _ = _predict(model, train_eval_loader, device)
-        train_auc = binary_auc(train_y, train_prob)
-        train_logloss = binary_logloss(train_y, train_prob)
+        if compute_train_metrics:
+            train_y, train_prob, _ = _predict(model, train_eval_loader, device, max_batches=max_eval_batches)
+            train_auc = binary_auc(train_y, train_prob) if train_y.size else float("nan")
+            train_logloss = binary_logloss(train_y, train_prob) if train_y.size else float("nan")
+        else:
+            train_auc = float("nan")
+            train_logloss = float("nan")
 
-        val_y, val_prob, _ = _predict(model, valid_loader, device)
-        val_auc = binary_auc(val_y, val_prob)
-        val_logloss = binary_logloss(val_y, val_prob)
+        val_y, val_prob, _ = _predict(model, valid_loader, device, max_batches=max_eval_batches)
+        val_auc = binary_auc(val_y, val_prob) if val_y.size else 0.0
+        val_logloss = binary_logloss(val_y, val_prob) if val_y.size else float("inf")
         progress.set_postfix(
             train_auc=f"{train_auc:.4f}",
             train_logloss=f"{train_logloss:.4f}",
