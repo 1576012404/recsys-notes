@@ -216,7 +216,8 @@ def train_once(config: Dict) -> Dict[str, object]:
     for epoch in range(1, epochs + 1):
         model.train()
         train_losses = []
-        for dense, sparse, y in tqdm(train_loader, desc=f"Epoch {epoch}/{epochs}", leave=True):
+        progress = tqdm(train_loader, desc=f"Epoch {epoch}/{epochs}", leave=True, dynamic_ncols=True)
+        for dense, sparse, y in progress:
             dense = dense.to(device)
             sparse = sparse.to(device)
             y = y.to(device).view(-1, 1)
@@ -225,12 +226,14 @@ def train_once(config: Dict) -> Dict[str, object]:
             loss = criterion(logits, y)
             loss.backward()
             optimizer.step()
-            train_losses.append(float(loss.item()))
+            loss_val = float(loss.item())
+            train_losses.append(loss_val)
+            progress.set_postfix(train_loss=f"{loss_val:.4f}")
 
         val_y, val_prob, _ = _predict(model, valid_loader, device)
         val_auc = binary_auc(val_y, val_prob)
         avg_train_loss = float(np.mean(train_losses)) if train_losses else float("nan")
-        print(f"[Epoch {epoch}/{epochs}] train_loss={avg_train_loss:.6f} valid_auc={val_auc:.6f}")
+        progress.set_postfix(train_loss=f"{avg_train_loss:.4f}", valid_auc=f"{val_auc:.4f}")
         if val_auc > best_auc:
             best_auc = val_auc
             best_epoch = epoch
