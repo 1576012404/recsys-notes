@@ -175,6 +175,7 @@ def train_once(config: Dict) -> Dict[str, object]:
     batch_size = int(config.get("batch_size", 4096))
     num_workers = int(config.get("num_workers", 0))
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    train_eval_loader = DataLoader(train_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     valid_loader = DataLoader(valid_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
@@ -230,10 +231,19 @@ def train_once(config: Dict) -> Dict[str, object]:
             train_losses.append(loss_val)
             progress.set_postfix(train_loss=f"{loss_val:.4f}")
 
+        train_y, train_prob, _ = _predict(model, train_eval_loader, device)
+        train_auc = binary_auc(train_y, train_prob)
+        train_logloss = binary_logloss(train_y, train_prob)
+
         val_y, val_prob, _ = _predict(model, valid_loader, device)
         val_auc = binary_auc(val_y, val_prob)
-        avg_train_loss = float(np.mean(train_losses)) if train_losses else float("nan")
-        progress.set_postfix(train_loss=f"{avg_train_loss:.4f}", valid_auc=f"{val_auc:.4f}")
+        val_logloss = binary_logloss(val_y, val_prob)
+        progress.set_postfix(
+            train_auc=f"{train_auc:.4f}",
+            train_logloss=f"{train_logloss:.4f}",
+            valid_auc=f"{val_auc:.4f}",
+            valid_logloss=f"{val_logloss:.4f}",
+        )
         if val_auc > best_auc:
             best_auc = val_auc
             best_epoch = epoch
