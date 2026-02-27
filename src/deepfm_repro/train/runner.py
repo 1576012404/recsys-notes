@@ -230,7 +230,7 @@ def train_once(config: Dict) -> Dict[str, object]:
         val_y, val_prob, _ = _predict(model, valid_loader, device)
         val_auc = binary_auc(val_y, val_prob)
         avg_train_loss = float(np.mean(train_losses)) if train_losses else float("nan")
-        tqdm.write(f"[Epoch {epoch}/{epochs}] train_loss={avg_train_loss:.6f} valid_auc={val_auc:.6f}")
+        print(f"[Epoch {epoch}/{epochs}] train_loss={avg_train_loss:.6f} valid_auc={val_auc:.6f}")
         if val_auc > best_auc:
             best_auc = val_auc
             best_epoch = epoch
