@@ -253,19 +253,22 @@ def train_once(config: Dict) -> Dict[str, object]:
             train_y, train_prob, _ = _predict(model, train_eval_loader, device, max_batches=max_eval_batches)
             train_auc = binary_auc(train_y, train_prob) if train_y.size else float("nan")
             train_logloss = binary_logloss(train_y, train_prob) if train_y.size else float("nan")
-        else:
-            train_auc = float("nan")
-            train_logloss = float("nan")
 
         val_y, val_prob, _ = _predict(model, valid_loader, device, max_batches=max_eval_batches)
         val_auc = binary_auc(val_y, val_prob) if val_y.size else 0.0
         val_logloss = binary_logloss(val_y, val_prob) if val_y.size else float("inf")
-        progress.set_postfix(
-            train_auc=f"{train_auc:.4f}",
-            train_logloss=f"{train_logloss:.4f}",
-            valid_auc=f"{val_auc:.4f}",
-            valid_logloss=f"{val_logloss:.4f}",
-        )
+        if compute_train_metrics:
+            progress.set_postfix(
+                train_auc=f"{train_auc:.4f}",
+                train_logloss=f"{train_logloss:.4f}",
+                valid_auc=f"{val_auc:.4f}",
+                valid_logloss=f"{val_logloss:.4f}",
+            )
+        else:
+            progress.set_postfix(
+                valid_auc=f"{val_auc:.4f}",
+                valid_logloss=f"{val_logloss:.4f}",
+            )
         progress.refresh()
         progress.close()
         if val_auc > best_auc:
