@@ -25,6 +25,7 @@ def main() -> None:
     parser.add_argument("--debug", action="store_true", help="Quick debug mode: fewer steps and eval batches.")
     parser.add_argument("--max-train-steps", type=int, default=None, help="Limit steps per epoch for fast iteration.")
     parser.add_argument("--max-eval-batches", type=int, default=None, help="Limit eval batches for fast iteration.")
+    parser.add_argument("--eval-batch-size", type=int, default=None, help="Batch size for validation/test evaluation.")
     args = parser.parse_args()
 
     model_cfg = args.model_config or f"configs/models/{args.model}.yaml"
@@ -40,6 +41,8 @@ def main() -> None:
         overrides["max_train_steps_per_epoch"] = args.max_train_steps
     if args.max_eval_batches is not None:
         overrides["max_eval_batches"] = args.max_eval_batches
+    if args.eval_batch_size is not None:
+        overrides["eval_batch_size"] = args.eval_batch_size
     if args.debug:
         overrides["epochs"] = min(int(overrides.get("epochs", 20)), 3)
         overrides["max_train_steps_per_epoch"] = int(overrides.get("max_train_steps_per_epoch", 200))

@@ -182,10 +182,11 @@ def train_once(config: Dict) -> Dict[str, object]:
     dense_dim = int(train_set.dense.shape[1])
 
     batch_size = int(config.get("batch_size", 4096))
+    eval_batch_size = int(config.get("eval_batch_size", 8192))
     num_workers = int(config.get("num_workers", 0))
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    valid_loader = DataLoader(valid_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-    test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    valid_loader = DataLoader(valid_set, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
+    test_loader = DataLoader(test_set, batch_size=eval_batch_size, shuffle=False, num_workers=num_workers)
 
     device = _get_device(config.get("device", "cuda"))
     model = _build_model(config, field_dims, dense_dim).to(device)
