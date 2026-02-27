@@ -216,7 +216,6 @@ def train_once(config: Dict) -> Dict[str, object]:
 
     for epoch in range(1, epochs + 1):
         model.train()
-        train_losses = []
         progress = tqdm(train_loader, desc=f"Epoch {epoch}/{epochs}", leave=True, dynamic_ncols=True)
         for dense, sparse, y in progress:
             dense = dense.to(device)
@@ -228,7 +227,6 @@ def train_once(config: Dict) -> Dict[str, object]:
             loss.backward()
             optimizer.step()
             loss_val = float(loss.item())
-            train_losses.append(loss_val)
             progress.set_postfix(train_loss=f"{loss_val:.4f}")
 
         train_y, train_prob, _ = _predict(model, train_eval_loader, device)
@@ -238,11 +236,10 @@ def train_once(config: Dict) -> Dict[str, object]:
         val_y, val_prob, _ = _predict(model, valid_loader, device)
         val_auc = binary_auc(val_y, val_prob)
         val_logloss = binary_logloss(val_y, val_prob)
-        progress.set_postfix(
-            train_auc=f"{train_auc:.4f}",
-            train_logloss=f"{train_logloss:.4f}",
-            valid_auc=f"{val_auc:.4f}",
-            valid_logloss=f"{val_logloss:.4f}",
+        tqdm.write(
+            f"[Epoch {epoch}/{epochs}] "
+            f"train_auc={train_auc:.4f} train_logloss={train_logloss:.4f} "
+            f"valid_auc={val_auc:.4f} valid_logloss={val_logloss:.4f}"
         )
         if val_auc > best_auc:
             best_auc = val_auc
