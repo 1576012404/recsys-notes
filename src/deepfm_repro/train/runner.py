@@ -184,7 +184,6 @@ def train_once(config: Dict) -> Dict[str, object]:
     batch_size = int(config.get("batch_size", 4096))
     num_workers = int(config.get("num_workers", 0))
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    train_eval_loader = DataLoader(train_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     valid_loader = DataLoader(valid_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
@@ -233,6 +232,8 @@ def train_once(config: Dict) -> Dict[str, object]:
         model.train()
         total_steps = len(train_loader) if max_train_steps_per_epoch is None else min(len(train_loader), max_train_steps_per_epoch)
         progress = tqdm(total=total_steps, desc=f"Epoch {epoch}/{epochs}", leave=True, dynamic_ncols=True)
+        train_labels_epoch = []
+        train_probs_epoch = []
         for step_idx, (dense, sparse, y) in enumerate(train_loader):
             if max_train_steps_per_epoch is not None and step_idx >= max_train_steps_per_epoch:
                 break
@@ -245,12 +246,19 @@ def train_once(config: Dict) -> Dict[str, object]:
             loss.backward()
             optimizer.step()
             loss_val = float(loss.item())
+            train_probs_epoch.append(torch.sigmoid(logits.detach()).cpu().numpy().reshape(-1))
+            train_labels_epoch.append(y.detach().cpu().numpy().reshape(-1))
             progress.set_postfix(train_loss=f"{loss_val:.4f}")
             progress.update(1)
 
-        train_y, train_prob, _ = _predict(model, train_eval_loader, device, max_batches=max_eval_batches)
-        train_auc = binary_auc(train_y, train_prob) if train_y.size else float("nan")
-        train_logloss = binary_logloss(train_y, train_prob) if train_y.size else float("nan")
+        if train_labels_epoch:
+            train_y = np.concatenate(train_labels_epoch)
+            train_prob = np.concatenate(train_probs_epoch)
+            train_auc = binary_auc(train_y, train_prob)
+            train_logloss = binary_logloss(train_y, train_prob)
+        else:
+            train_auc = float("nan")
+            train_logloss = float("nan")
 
         val_y, val_prob, _ = _predict(model, valid_loader, device, max_batches=max_eval_batches)
         val_auc = binary_auc(val_y, val_prob) if val_y.size else 0.0
