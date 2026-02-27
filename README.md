@@ -50,6 +50,12 @@ Quick debug run:
 python -m scripts.train --model deepfm --seed 2026 --debug
 ```
 
+Quick tune (short-budget grid search):
+
+```bash
+python -m scripts.quick_tune --model deepfm --lrs 0.001 0.0015 --batch-sizes 4096 8192 --seeds 2026
+```
+
 Train FM pretrain for FNN:
 
 ```bash
