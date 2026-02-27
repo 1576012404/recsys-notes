@@ -25,11 +25,6 @@ def main() -> None:
     parser.add_argument("--debug", action="store_true", help="Quick debug mode: fewer steps and eval batches.")
     parser.add_argument("--max-train-steps", type=int, default=None, help="Limit steps per epoch for fast iteration.")
     parser.add_argument("--max-eval-batches", type=int, default=None, help="Limit eval batches for fast iteration.")
-    parser.add_argument(
-        "--no-train-metrics",
-        action="store_true",
-        help="Skip train AUC/LogLoss calculation each epoch (faster).",
-    )
     args = parser.parse_args()
 
     model_cfg = args.model_config or f"configs/models/{args.model}.yaml"
@@ -45,13 +40,10 @@ def main() -> None:
         overrides["max_train_steps_per_epoch"] = args.max_train_steps
     if args.max_eval_batches is not None:
         overrides["max_eval_batches"] = args.max_eval_batches
-    if args.no_train_metrics:
-        overrides["compute_train_metrics"] = False
     if args.debug:
         overrides["epochs"] = min(int(overrides.get("epochs", 20)), 3)
         overrides["max_train_steps_per_epoch"] = int(overrides.get("max_train_steps_per_epoch", 200))
         overrides["max_eval_batches"] = int(overrides.get("max_eval_batches", 50))
-        overrides["compute_train_metrics"] = True
 
     cfg = load_train_config(args.common_config, model_cfg, overrides)
     summary = train_once(cfg)

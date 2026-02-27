@@ -217,7 +217,6 @@ def train_once(config: Dict) -> Dict[str, object]:
     max_eval_batches = config.get("max_eval_batches")
     if max_eval_batches is not None:
         max_eval_batches = int(max_eval_batches)
-    compute_train_metrics = bool(config.get("compute_train_metrics", True))
 
     run_id = f"{config['model']}_{seed}_{uuid.uuid4().hex[:8]}"
     timestamp = datetime.now(timezone.utc).isoformat()
@@ -249,26 +248,19 @@ def train_once(config: Dict) -> Dict[str, object]:
             progress.set_postfix(train_loss=f"{loss_val:.4f}")
             progress.update(1)
 
-        if compute_train_metrics:
-            train_y, train_prob, _ = _predict(model, train_eval_loader, device, max_batches=max_eval_batches)
-            train_auc = binary_auc(train_y, train_prob) if train_y.size else float("nan")
-            train_logloss = binary_logloss(train_y, train_prob) if train_y.size else float("nan")
+        train_y, train_prob, _ = _predict(model, train_eval_loader, device, max_batches=max_eval_batches)
+        train_auc = binary_auc(train_y, train_prob) if train_y.size else float("nan")
+        train_logloss = binary_logloss(train_y, train_prob) if train_y.size else float("nan")
 
         val_y, val_prob, _ = _predict(model, valid_loader, device, max_batches=max_eval_batches)
         val_auc = binary_auc(val_y, val_prob) if val_y.size else 0.0
         val_logloss = binary_logloss(val_y, val_prob) if val_y.size else float("inf")
-        if compute_train_metrics:
-            progress.set_postfix(
-                train_auc=f"{train_auc:.4f}",
-                train_logloss=f"{train_logloss:.4f}",
-                valid_auc=f"{val_auc:.4f}",
-                valid_logloss=f"{val_logloss:.4f}",
-            )
-        else:
-            progress.set_postfix(
-                valid_auc=f"{val_auc:.4f}",
-                valid_logloss=f"{val_logloss:.4f}",
-            )
+        progress.set_postfix(
+            train_auc=f"{train_auc:.4f}",
+            train_logloss=f"{train_logloss:.4f}",
+            valid_auc=f"{val_auc:.4f}",
+            valid_logloss=f"{val_logloss:.4f}",
+        )
         progress.refresh()
         progress.close()
         if val_auc > best_auc:
